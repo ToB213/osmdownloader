@@ -1,3 +1,5 @@
+import * as maplibregl from 'https://unpkg.com/maplibre-gl@^6.10.0/dist/maplibre-gl.mjs';
+
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tile.openstreetmap.jp/styles/osm-bright-ja/style.json',
@@ -16,7 +18,10 @@ const downloadButton = document.querySelector('.download');
 map.on('load', () => {
   map.addSource('download-area', {
     type: 'geojson',
-    data: null
+    data: {
+      type: 'FeatureCollection',
+      features: []
+    }
   });
   map.addLayer({
     id: 'download-area-fill-layer',
@@ -88,10 +93,10 @@ function updateDownloadArea() {
   const center = turf.point(Object.values(centerLngLat));
   
   // Calculate endpoints in four directions.
-  const north = turf.destination(center, width / 1000 / 2, 0, {units: 'kilometers'});
-  const east = turf.destination(center, height / 1000 / 2, 90, {units: 'kilometers'});
-  const south = turf.destination(center, width / 1000 / 2, 180, {units: 'kilometers'});
-  const west = turf.destination(center, height / 1000 / 2, 270, {units: 'kilometers'});
+  const north = turf.destination(center, height / 1000 / 2, 0, {units: 'kilometers'});
+  const east = turf.destination(center, width / 1000 / 2, 90, {units: 'kilometers'});
+  const south = turf.destination(center, height / 1000 / 2, 180, {units: 'kilometers'});
+  const west = turf.destination(center, width / 1000 / 2, 270, {units: 'kilometers'});
   
   // Create the rectangle(download area) from these endpoints.
   const points = turf.featureCollection([ north, east, south, west ]);
