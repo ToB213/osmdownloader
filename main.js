@@ -14,6 +14,7 @@ const latitude = document.getElementById('latitude');
 const searchbox = document.querySelector('.search input');
 const searchButton = document.querySelector('.search button');
 const downloadButton = document.querySelector('.download');
+let downloadArea;
 
 map.on('load', () => {
   map.addSource('download-area', {
@@ -104,6 +105,7 @@ function updateDownloadArea() {
 
   // Draw the download area.
   map.getSource('download-area').setData(area);
+  downloadArea = area;
 
   return area;
 }
@@ -121,10 +123,8 @@ async function searchArea() {
 
 // Download osm data
 async function downloadOsmData() {
-  // Get bounding box of the download area
-  const data = map.getSource('download-area')._data;
-  if (data == null) return;
-  const bbox = data.geojson.bbox;
+  if (!downloadArea) return;
+  const bbox = downloadArea.bbox;
 
   // Download osm xml data.
   const type = 'xml';
