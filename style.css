@@ -73,3 +73,23 @@ header {
 .download {
   font-family: 'Noto Sans JP', sans-serif;
 }
+
+.download:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.download-status {
+  box-sizing: border-box;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.85rem;
+  max-width: 15rem;
+}
+
+.download-status[data-state='error'] {
+  color: #b00020;
+}
+
+.download-status[data-state='success'] {
+  color: #167238;
+}

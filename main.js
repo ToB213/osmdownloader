@@ -14,6 +14,7 @@ const latitude = document.getElementById('latitude');
 const searchbox = document.querySelector('.search input');
 const searchButton = document.querySelector('.search button');
 const downloadButton = document.querySelector('.download');
+const downloadStatus = document.querySelector('.download-status');
 
 const overpassEndpoints = [
   'https://overpass-api.de/api/interpreter',
@@ -130,17 +131,37 @@ async function searchArea() {
 
 // Download osm data
 async function downloadOsmData() {
-  if (!downloadArea) return;
+  if (!downloadArea) {
+    setDownloadStatus('Select an area on the map first.', 'error');
+    return;
+  }
+
   const bbox = downloadArea.bbox;
 
   // Download osm xml data.
   const type = 'xml';
   const opq = createOverpassQuery(bbox, type);
-  const osm = await fetchOverpassData(opq);
+  downloadButton.disabled = true;
+  setDownloadStatus('Downloading OSM data...', 'loading');
+
+  let osm;
+  try {
+    osm = await fetchOverpassData(opq);
+  } catch (error) {
+    console.error(error);
+    setDownloadStatus('Download failed. The Overpass API is currently unavailable. Please try again later.', 'error');
+    downloadButton.disabled = false;
+    return;
+  }
 
   // Parse osm to geojson
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(osm, 'text/xml');
+  if (xmlDoc.querySelector('parsererror')) {
+    setDownloadStatus('Download failed because the server returned invalid data.', 'error');
+    downloadButton.disabled = false;
+    return;
+  }
   const geojson = osmtogeojson(xmlDoc);
 
   if (map.getSource('osm-data')) {
@@ -190,6 +211,9 @@ async function downloadOsmData() {
   // Remove node and url for the download.
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  setDownloadStatus('Download complete.', 'success');
+  downloadButton.disabled = false;
 }
 
 // Try multiple public Overpass instances because an individual instance may be
@@ -224,6 +248,11 @@ async function fetchOverpassData(query) {
   }
 
   throw new AggregateError(failures, 'All Overpass API endpoints failed.');
+}
+
+function setDownloadStatus(message, state) {
+  downloadStatus.textContent = message;
+  downloadStatus.dataset.state = state;
 }
 
 // Create overpass query to download osm data within bounding box
