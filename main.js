@@ -14,6 +14,13 @@ const latitude = document.getElementById('latitude');
 const searchbox = document.querySelector('.search input');
 const searchButton = document.querySelector('.search button');
 const downloadButton = document.querySelector('.download');
+
+const overpassEndpoints = [
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter'
+];
+const overpassRequestTimeout = 45000;
 let downloadArea;
 
 map.on('load', () => {
@@ -129,15 +136,7 @@ async function downloadOsmData() {
   // Download osm xml data.
   const type = 'xml';
   const opq = createOverpassQuery(bbox, type);
-  console.log(opq);
-  const response = await fetch(
-    'https://overpass-api.de/api/interpreter',
-    {
-      method: 'POST',
-      body: 'data=' + encodeURIComponent(opq)
-    });
-  if (!response.ok) throw new Error('Could not get data using overpass API.');
-  const osm = await response.text();
+  const osm = await fetchOverpassData(opq);
 
   // Parse osm to geojson
   const parser = new DOMParser();
@@ -191,6 +190,40 @@ async function downloadOsmData() {
   // Remove node and url for the download.
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// Try multiple public Overpass instances because an individual instance may be
+// temporarily overloaded or unavailable.
+async function fetchOverpassData(query) {
+  const failures = [];
+
+  for (const endpoint of overpassEndpoints) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), overpassRequestTimeout);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: 'data=' + encodeURIComponent(query),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`${endpoint} returned HTTP ${response.status}`);
+      }
+
+      return await response.text();
+    } catch (error) {
+      failures.push(error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new AggregateError(failures, 'All Overpass API endpoints failed.');
 }
 
 // Create overpass query to download osm data within bounding box
